@@ -66,32 +66,39 @@ namespace OpenCover.UI.Commands
 		protected override void OnExecute()
 		{
 			CodeCoverageResults.ClearTreeView();
-			TestMethodWrapperContainer msTests = null, nUnitTests = null;
+			TestMethodWrapperContainer msTests = null, nUnitTests = null, xUnitTests = null;
 			TestMethodWrapperContainer container = TestExplorer.TestsTreeView.Root as TestMethodWrapperContainer;
-
+            
+            // TODO: Does not support multiple test frameworks at once
 			if (container != null)
 			{
 				if (container.TestType == TestType.MSTest)
 				{
 					msTests = container;
 				}
+				else if (container.TestType == TestType.NUnit)
+				{
+				    nUnitTests = container;
+				}
 				else
 				{
-					nUnitTests = container;
+				    xUnitTests = container;
 				}
 			}
-			else
+			else // Why index 0 = mstest and index 1 = nunit
 			{
 				msTests = TestExplorer.TestsTreeView.Root.Children[0] as TestMethodWrapperContainer;
 				nUnitTests = TestExplorer.TestsTreeView.Root.Children[1] as TestMethodWrapperContainer;
+			    xUnitTests = TestExplorer.TestsTreeView.Root.Children[2] as TestMethodWrapperContainer;
 			}
 
 			var selectedMSTests = msTests != null ? msTests.GetSelectedTestGroupsAndTests() : null;
 			var selectedNUnitTests = nUnitTests != null ? nUnitTests.GetSelectedTests() : null;
+		    var selectedXUnitTests = xUnitTests != null ? xUnitTests.GetSelectedTests() : null;
 
 			_testExecutor = null;
 
-			SetTestExecutor(selectedMSTests, selectedNUnitTests);
+			SetTestExecutor(selectedMSTests, selectedNUnitTests, selectedXUnitTests);
 
 			if (_testExecutor == null)
 			{
@@ -137,7 +144,9 @@ namespace OpenCover.UI.Commands
 		/// </summary>
 		/// <param name="selectedMSTests">The selected ms tests.</param>
 		/// <param name="selectedNUnitTests">The selected n unit tests.</param>
-		private void SetTestExecutor(Tuple<IEnumerable<string>, IEnumerable<string>, IEnumerable<string>> selectedMSTests, Tuple<IEnumerable<string>, IEnumerable<string>, IEnumerable<string>> selectedNUnitTests)
+        private void SetTestExecutor(Tuple<IEnumerable<string>, IEnumerable<string>, IEnumerable<string>> selectedMSTests,
+            Tuple<IEnumerable<string>, IEnumerable<string>, IEnumerable<string>> selectedNUnitTests,
+            Tuple<IEnumerable<string>, IEnumerable<string>, IEnumerable<string>> selectedXUnitTests) // TODO: this is strange!!!!!!!!!!
 		{
 			if (selectedMSTests != null && (selectedMSTests.Item1.Any() || selectedMSTests.Item2.Any() || selectedMSTests.Item3.Any()))
 			{
@@ -147,6 +156,10 @@ namespace OpenCover.UI.Commands
 			{
 				_testExecutor = new NUnitTestExecutor(_package, selectedNUnitTests);
 			}
+            else if (selectedXUnitTests != null)
+            {
+                _testExecutor = new XUnitTestExecutor(_package, selectedXUnitTests);
+            }
 		}
 
 		/// <summary>

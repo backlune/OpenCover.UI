@@ -121,10 +121,12 @@ namespace OpenCover.UI.Helpers
 		/// Finds all the dlls in the project with reference to UnitTestFramework.dll
 		/// </summary>
 		/// <returns>List of all dlls which might contain tests</returns>
+		/// <remarks>Customized to support xunit</remarks>
 		internal static IEnumerable<string> GetPotentialTestDLLs()
 		{
 			string mstestPath = "Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll";
 			string nunitPath = "nunit.Framework.dll";
+		    string xunitPath = "xunit.dll"; // Path for xunit
 
 			List<EnvDTE.Project> projects = new List<EnvDTE.Project>();
 
@@ -139,8 +141,8 @@ namespace OpenCover.UI.Helpers
 				{
 					foreach (Reference reference in vsProject2.References)
 					{
-						var referenceFile = Path.GetFileName(reference.Path);
-						if (mstestPath.Equals(referenceFile, StringComparison.InvariantCultureIgnoreCase) || nunitPath.Equals(referenceFile, StringComparison.InvariantCultureIgnoreCase))
+						var referenceFile = Path.GetFileName(reference.Path); //TODO: Must check xunitPath
+						if (CheckReferenceFile(referenceFile, new []{mstestPath, nunitPath, xunitPath}))
 						{
 							isTestProject = true;
 							break;
@@ -155,6 +157,17 @@ namespace OpenCover.UI.Helpers
 			}
 
 		}
+
+	    private static bool CheckReferenceFile(string referenceFile, string[] paths)
+	    {
+	        foreach (var path in paths)
+	        {
+	            if (path.Equals(referenceFile, StringComparison.InvariantCultureIgnoreCase))
+	                return true;
+	        }
+
+	        return false;
+	    }
 
 		private static void GetProjects(EnvDTE.Projects projects, List<EnvDTE.Project> projectList)
 		{

@@ -10,6 +10,9 @@
     </UpgradeBackupLocation>
     <OldToolsVersion>4.0</OldToolsVersion>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -192,6 +195,7 @@
     <Compile Include="Processors\MSTestExecutor.cs" />
     <Compile Include="Processors\NUnitTestExecutor.cs" />
     <Compile Include="Processors\VSEventsHandler.cs" />
+    <Compile Include="Processors\XUnitTestExecutor.cs" />
     <Compile Include="Tagger\TextBackground.cs" />
     <Compile Include="Tagger\TextTagger.cs" />
     <Compile Include="Tagger\TextTaggerProvider.cs" />

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Xunit;
 
 namespace OpenCover.UI.TestDiscoverer
 {
@@ -87,6 +88,7 @@ namespace OpenCover.UI.TestDiscoverer
 					{
 						bool isMSTest = false;
 						bool isNUnitTest = false;
+					    bool isXUnitTest = false;
 
 						try
 						{
@@ -95,21 +97,24 @@ namespace OpenCover.UI.TestDiscoverer
 							{
 								isMSTest = customAttributes.Any(attribute => attribute.AttributeType.FullName == typeof(TestClassAttribute).FullName);
 								isNUnitTest = IsNUnitTest(type);
+							    isXUnitTest = IsXUnitTest(type);
 							}
 						}
 						catch { }
 
-						if (isMSTest || isNUnitTest)
+						if (isMSTest || isNUnitTest || isXUnitTest)
 						{
+						    var testType = isNUnitTest ? TestType.NUnit : (isXUnitTest ? TestType.XUnit : TestType.MSTest);
+
 							var TestClass = new TestClass
 							{
 								DLLPath = dll,
 								Name = type.Name,
 								Namespace = type.Namespace,
-								TestType = isNUnitTest ? TestType.NUnit : TestType.MSTest
+								TestType = testType
 							};
 
-							TestClass.TestMethods = DiscoverTestsInClass(type, TestClass, isNUnitTest);
+							TestClass.TestMethods = DiscoverTestsInClass(type, TestClass, testType);
 							classes.Add(TestClass);
 						}
 					}
@@ -143,12 +148,43 @@ namespace OpenCover.UI.TestDiscoverer
 			return false;
 		}
 
+        /// <summary>
+        /// Determines whether the Type has FactAttribute on itself or on one of its parents
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        /// <remarks>Custom method for xunit</remarks>
+	    private bool IsXUnitTest(TypeDefinition type)
+	    {
+            if (type == null)
+            {
+                return false;
+            }
+
+            if (type.CustomAttributes != null &&
+                type.Methods.Any(
+                    m =>
+                        m.CustomAttributes.Any(
+                            attribute => attribute.AttributeType.FullName == typeof (FactAttribute).FullName)))
+            {
+                return true;
+            }
+
+            if (type.BaseType != null && type.BaseType is TypeDefinition)
+            {
+                return IsNUnitTest(type.BaseType as TypeDefinition);
+            }
+
+            return false;
+	    }
+
 		/// <summary>
 		/// Discovers the tests in class.
 		/// </summary>
 		/// <param name="type">Type of the class.</param>
 		/// <returns>Tests in the class</returns>
-		private TestMethod[] DiscoverTestsInClass(TypeDefinition type, TestClass @class, bool isNUnitTest)
+		/// <remarks>Changed last param to test type so that more test types can be suported</remarks>
+		private TestMethod[] DiscoverTestsInClass(TypeDefinition type, TestClass @class, TestType testType)
 		{
 			var tests = new List<TestMethod>();
 			foreach (var method in type.Methods)
@@ -160,7 +196,7 @@ namespace OpenCover.UI.TestDiscoverer
 				{
 					foreach (var attribute in method.CustomAttributes)
 					{
-						if (isNUnitTest)
+						if (testType == TestType.NUnit)
 						{
 							if (attribute.AttributeType.FullName == typeof(TestAttribute).FullName || attribute.AttributeType.FullName == typeof(TestCaseAttribute).FullName)
 							{
@@ -169,14 +205,23 @@ namespace OpenCover.UI.TestDiscoverer
 
 							AddTraits(trait, attribute, typeof(CategoryAttribute));
 						}
+						else if (testType == TestType.MSTest)
+						{
+						    if (attribute.AttributeType.FullName == typeof (TestMethodAttribute).FullName)
+						    {
+						        isTestMethod = true;
+						    }
+
+						    AddTraits(trait, attribute, typeof (TestCategoryAttribute));
+						}
 						else
 						{
-							if (attribute.AttributeType.FullName == typeof(TestMethodAttribute).FullName)
-							{
-								isTestMethod = true;
-							}
+                            if (attribute.AttributeType.FullName == typeof(FactAttribute).FullName)
+                            {
+                                isTestMethod = true;
+                            }
 
-							AddTraits(trait, attribute, typeof(TestCategoryAttribute));
+                           //TODO: not sure what this should be in XUnit AddTraits(trait, attribute, typeof(TestCategoryAttribute));
 						}
 					}
 				}
